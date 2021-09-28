@@ -61,6 +61,13 @@ async def create_token(username: str, password : str):
     return token
 
 
+@app.post('/token')
+async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = await autenticate_user(form_data.username, form_data.password)
+
+    token = await create_token(form_data.username, form_data.password)
+    return {'access_token' : token, 'token_type' : 'bearer'}
+
 async def check_token(token:str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
