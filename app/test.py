@@ -62,12 +62,8 @@ def test_data(client: TestClient):
     headers = {
         'Authorization': 'Bearer {}'.format(token)
     }
-
-    print(headers)
-
+    
     response = client.get("/data", headers=headers)
-
-    print(response)
 
     data = response.json()
 

@@ -5,17 +5,17 @@ from datetime import datetime
 from .models import Data
 import decimal
 
-async def get_diarioOficial():
+async def get_diario_oficial():
     try:
         r = requests.get('https://www.banxico.org.mx/tipcamb/tipCamMIAction.do')
         soup = BeautifulSoup(r.text, 'lxml')
-        renglonTituloColumnas = soup.find("tr", {"class": "renglonNon"})
-        rows = renglonTituloColumnas.parent.find_all('tr')
+        renglon_titulo_columnas = soup.find("tr", {"class": "renglonNon"})
+        rows = renglon_titulo_columnas.parent.find_all('tr')
         data = []
         for row in rows:
-            className = row.get('class')
-            if className:
-                if 'renglonNon' == className[0] or 'renglonPar' == className[0] :
+            class_name = row.get('class')
+            if class_name:
+                if 'renglonNon' == class_name[0] or 'renglonPar' == class_name[0] :
                     cols = row.find_all('td')
                     cols = [ele.text.strip() for ele in cols]
                     data.append([ele for ele in cols if ele])
@@ -72,35 +72,35 @@ async def get_banxico():
         pass
 
 
-async def getValues():
-    await get_diarioOficial()
+async def get_values():
+    await get_diario_oficial()
     await get_fixer()
     await get_banxico()
 
-    diarioOficial = await Data.filter(provider=1).order_by('created_at').limit(1).values("value","last_updated")
+    diario_oficial = await Data.filter(provider=1).order_by('created_at').limit(1).values("value","last_updated")
     fixer = await Data.filter(provider=2).order_by('created_at').limit(1).values("value","last_updated")
     banxico = await Data.filter(provider=3).order_by('created_at').limit(1).values("value","last_updated")
 
-    diarioOficial = diarioOficial[0] if diarioOficial else None
+    diario_oficial = diario_oficial[0] if diario_oficial else None
     fixer = fixer[0] if fixer else None
     banxico = banxico[0] if banxico else None
 
-    if diarioOficial:
-        diarioOficial['value'] = decimal.Decimal(diarioOficial['value']) 
+    if diario_oficial:
+        diario_oficial['value'] = decimal.Decimal(diario_oficial['value']) 
     if fixer:
         fixer['value'] = decimal.Decimal(fixer['value']) 
     if banxico:
         banxico['value'] = decimal.Decimal(banxico['value']) 
 
-    responseData = {
+    response_data = {
         'rates' : {
         }
     }
-    if diarioOficial:
-        responseData['rates']['provider_1'] = diarioOficial
+    if diario_oficial:
+        response_data['rates']['provider_1'] = diario_oficial
     if fixer:
-        responseData['rates']['provider_2'] = fixer
+        response_data['rates']['provider_2'] = fixer
     if banxico:
-        responseData['rates']['provider_3'] = banxico
+        response_data['rates']['provider_3'] = banxico
 
-    return responseData
+    return response_data

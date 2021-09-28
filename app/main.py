@@ -10,20 +10,22 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from .models import User, Data
+import os
 
-from .api import getValues
+from .get_service_data import get_values
 
 limiter = Limiter(key_func=get_remote_address)
-app = FastAPI(title='Corner Shop', 
+app = FastAPI(title='Credi Justo', 
                 description='Exposes the current exchange rate of USD to MXN from three different sources in the same endpoint.',
                 version='1.0.1' )
         
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-JWT_SECRET = 'corner2021'
+JWT_SECRET = os.environ.get('JWT_SECRET')
 
 User_Pydantic = pydantic_model_creator(User, name='User')
+
 UserIn_Pydantic = pydantic_model_creator(User, name='UserIn', exclude_readonly=True )
 
 Data_Pydantic = pydantic_model_creator(Data, name='Data')
@@ -67,7 +69,7 @@ async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()):
     token = await create_token(form_data.username, form_data.password)
     return {'access_token' : token, 'token_type' : 'bearer'}
 
-async def get_current_user(token:str = Depends(oauth2_scheme)):
+async def check_token(token:str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
         user = await User.get(id = payload.get('id'))
@@ -86,34 +88,16 @@ async def create_user(user: UserIn_Pydantic):
     await user_obj.save()
     return await User_Pydantic.from_tortoise_orm(user_obj)
 
-
-@app.get('/users/me', response_model=User_Pydantic)
-@limiter.limit("5/minute")
-async def get_user(request: Request, user: UserIn_Pydantic = Depends(get_current_user)):
-    return user
-
 @app.get('/data')
 @limiter.limit("5/minute")
-async def get_data(request: Request, user: UserIn_Pydantic = Depends(get_current_user)):
-    return await getValues()
+async def get_data(request: Request, user: UserIn_Pydantic = Depends(check_token)):
+    return await get_values()
 
 
 register_tortoise(
     app,
     db_url='sqlite://db.sqlite3',
     modules={'models' : ['app.models']},
-    # modules={'models' : ['models']},
     generate_schemas = True,
     add_exception_handlers=True
 )
-
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-# @app.post('/token')
-# async def token(form_data: OAuth2PasswordRequestForm = Depends()):
-#     return { 'access_token' : form_data.username + 'token'}
-
-# @app.get('/')
-# async def index(token: str = Depends(oauth2_scheme)):
-#     return {'token' : token}
-
