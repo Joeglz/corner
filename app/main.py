@@ -1,3 +1,5 @@
+import os
+import jwt
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, oauth2
 from tortoise import fields
@@ -5,13 +7,10 @@ from tortoise.models import Model
 from tortoise.contrib.fastapi import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator
 from passlib.hash import bcrypt
-import jwt
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from .models import User, Data
-import os
-
 from .get_service_data import get_values
 
 limiter = Limiter(key_func=get_remote_address)
